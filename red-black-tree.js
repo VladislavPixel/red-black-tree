@@ -56,18 +56,29 @@ class RedBlackTree {
 				if (this.isBrokeRule(parent, current)) {
 					const { isExternalGrandson, isLeft } = this.checkGrandson(current, parent, grandfather);
 
-					if (isExternalGrandson) {
-						grandfather.isRed = !grandfather.isRed;
+					grandfather.isRed = !grandfather.isRed;
 
+					if (isExternalGrandson) {
 						parent.isRed = !parent.isRed;
 
 						if (isLeft) {
 							this.ror(grandfather, parent, nodes);
 						} else {
-							this.rol();
+							this.rol(grandfather, parent, nodes);
 						}
 					} else {
-						// ДОДЕЛАТЬ двойные повороты
+						current.isRed = !current.isRed;
+
+						if (isLeft) {
+							this.rorSmall(grandfather, parent, current);
+
+							this.rol(grandfather, current, nodes);
+
+						} else {
+							this.rolSmall(grandfather, parent, current);
+
+							this.ror(grandfather, current, nodes);
+						}
 					}
 				}
 
@@ -104,9 +115,9 @@ class RedBlackTree {
 		if (this.isBrokeRule(parent, newNode)) {
 			const { isExternalGrandson, isLeft } = this.checkGrandson(newNode, parent, grandfather);
 
-			if (isExternalGrandson) {
-				grandfather.isRed = !grandfather.isRed;
+			grandfather.isRed = !grandfather.isRed;
 
+			if (isExternalGrandson) {
 				parent.isRed = !parent.isRed;
 
 				if (isLeft) {
@@ -118,8 +129,6 @@ class RedBlackTree {
 
 			} else {
 				newNode.isRed = !newNode.isRed;
-
-				grandfather.isRed = !grandfather.isRed;
 
 				if (isLeft) {
 					this.rorSmall(grandfather, parent, newNode);
@@ -140,34 +149,24 @@ class RedBlackTree {
 	}
 
 	rorSmall(grandfather, parent, grandson) {
-		// if (grandfather.right === parent) {
-			
-		// } else {}
+		parent.left = grandson.right;
 
 		grandson.right = parent;
 
 		grandfather.right = grandson;
-
-		parent.left = grandson.left;
 	}
 
 	rolSmall(grandfather, parent, grandson) {
-		// if (grandfather.left === parent) {
-		// } else {}
-
-		grandson.left = parent;
-
 		grandfather.left = grandson;
 
-		parent.right = grandson.right;
+		parent.right = grandson.left;
+
+		grandson.left = parent;
 	}
 
 	ror(grandfather, parent, nodes) {
 		if (nodes.length !== 0) {
 			const saveNode = nodes.pop();
-
-			// if (saveNode.left === grandfather) {
-			// } else {}
 
 			saveNode.left = parent;
 
@@ -184,16 +183,20 @@ class RedBlackTree {
 	}
 
 	rol(grandfather, parent, nodes) {
-		const saveNode = nodes.pop();
+		if (nodes.length !== 0) {
+			const saveNode = nodes.pop();
 
-		if (saveNode.left === grandfather) {
 			saveNode.left = parent;
 
 			grandfather.right = parent.left;
 
 			parent.left = grandfather;
 		} else {
+			grandfather.right = parent.left;
 
+			parent.left = grandfather;
+
+			this.root = parent;
 		}
 	}
 
