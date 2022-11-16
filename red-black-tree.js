@@ -4,12 +4,16 @@ class RedBlackTree {
 		this.length = 0;
 	}
 
+	getIteratorForFindMethod(key) {
+		return new IteratorForFindMethod(this.root, key);
+	}
+
 	isBrokeRule(parent, node) {
 		if (parent === null) {
 			return false;
 		}
 
-		return parent.isRed === node.isRed;
+		return parent.isRed === true && node.isRed === true;
 	}
 
 	checkGrandson(grandson, parent, grandfather) {
@@ -73,7 +77,7 @@ class RedBlackTree {
 				return { children: currentNode, brokeRuleStatus: false, grandson: children };
 			}
 
-			if (brokeRuleStatus === false) { //? Подумать нужен ли в этой точке null для проверки правила 3, не оверхед ли это или просто false поставить
+			if (brokeRuleStatus === false) {
 				return { children: currentNode, brokeRuleStatus: null, grandson: children };
 			}
 
@@ -150,7 +154,19 @@ class RedBlackTree {
 		parent.left = grandfather;
 	}
 
-	find() {
+	find(key) {
+		if (this.length === 0) {
+			throw new Error("Method is find is not suppoeted in Empty RedBlackTree.");
+		}
 
+		const iterator = this.getIteratorForFindMethod(key);
+
+		for (const node of iterator) {
+			if (node.key === key) {
+				return node.value;
+			}
+		}
+
+		return -1;
 	}
 }
