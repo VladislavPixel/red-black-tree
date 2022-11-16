@@ -20,6 +20,20 @@ class RedBlackTree {
 		return { isExternalGrandson: isLeftParent === isLeftGrandson, isLeft: isLeftGrandson };
 	}
 
+	isTriggerColor(node) {
+		return !node.isRed && node.left !== null && node.left.isRed && node.right !== null && node.right.isRed;
+	}
+
+	updateColorsForNodeAndChildrens(node) {
+		if (node !== this.root) {
+			node.isRed = true;
+		}
+
+		node.left.isRed = false;
+
+		node.right.isRed = false;
+	}
+
 	insert(value, key) {
 		const newNode = new Node(value, key);
 
@@ -33,115 +47,75 @@ class RedBlackTree {
 			return this.length;
 		}
 
-		const nodes = [];
+		const recLookPlaceAndInsert = (currentNode) => {
+			if (currentNode === null) {
+				return { children: newNode, brokeRuleStatus: null, grandson: null };
+			}
 
-		let grandfather = null;
+			const isLeftNodeNext = key < currentNode.key ? true : false;
 
-		let parent = null;
+			const nextNode = isLeftNodeNext ? currentNode.left : currentNode.right;
 
-		let current = this.root;
+			const { children, brokeRuleStatus, grandson } = recLookPlaceAndInsert(nextNode);
 
-		while(current !== null) {
-			const isTriggerColor = !current.isRed && current.left !== null && current.left.isRed && current.right !== null && current.right.isRed;
-
-			if (isTriggerColor) {
-				if (current !== this.root) {
-					current.isRed = true;
-				}
-
-				current.left.isRed = false;
-
-				current.right.isRed = false;
-
-				if (this.isBrokeRule(parent, current)) {
-					const { isExternalGrandson, isLeft } = this.checkGrandson(current, parent, grandfather);
-
-					grandfather.isRed = !grandfather.isRed;
-
-					if (isExternalGrandson) {
-						parent.isRed = !parent.isRed;
-
-						if (isLeft) {
-							this.ror(grandfather, parent, nodes);
-						} else {
-							this.rol(grandfather, parent, nodes);
-						}
-					} else {
-						current.isRed = !current.isRed;
-
-						if (isLeft) {
-							this.rorSmall(grandfather, parent, current);
-
-							this.rol(grandfather, current, nodes);
-
-						} else {
-							this.rolSmall(grandfather, parent, current);
-
-							this.ror(grandfather, current, nodes);
-						}
-					}
-				}
+			if (isLeftNodeNext) {
+				currentNode.left = children;
 
 			} else {
-				if (parent !== grandfather) {
-					const save = grandfather;
-
-					if (save !== null) {
-						nodes.push(save);
-					}
-
-					grandfather = parent;
-				}
-
-				parent = current;
-
-				if (key < current.key) {
-					current = current.left;
-
-					if (current === null) {
-						parent.left = newNode;
-					}
-
-				} else {
-					current = current.right;
-
-					if (current === null) {
-						parent.right = newNode;
-					}
-				}
+				currentNode.right = children;
 			}
-		}
 
-		if (this.isBrokeRule(parent, newNode)) {
-			const { isExternalGrandson, isLeft } = this.checkGrandson(newNode, parent, grandfather);
+			if (brokeRuleStatus === null) {
+				if (this.isBrokeRule(currentNode, children)) {
+					return { children: currentNode, brokeRuleStatus: true, grandson: children };
+				}
 
-			grandfather.isRed = !grandfather.isRed;
+				return { children: currentNode, brokeRuleStatus: false, grandson: children };
+			}
+
+			if (brokeRuleStatus === false) { //? Подумать нужен ли в этой точке null для проверки правила 3, не оверхед ли это или просто false поставить
+				return { children: currentNode, brokeRuleStatus: null, grandson: children };
+			}
+
+			if (this.isTriggerColor(currentNode)) {
+				this.updateColorsForNodeAndChildrens(currentNode);
+
+				return { children: currentNode, brokeRuleStatus: null, grandson: children };
+			}
+
+			const { isExternalGrandson, isLeft } = this.checkGrandson(grandson, children, currentNode);
+
+			currentNode.isRed = !currentNode.isRed;
 
 			if (isExternalGrandson) {
-				parent.isRed = !parent.isRed;
+				children.isRed = !children.isRed;
 
 				if (isLeft) {
-					this.ror(grandfather, parent, nodes);
-
+					this.ror(currentNode, children);
 				} else {
-					this.rol(grandfather, parent, nodes);
+					this.rol(currentNode, children);
 				}
+
+				return { children, brokeRuleStatus: null, grandson: null };
+			}
+
+			grandson.isRed = !grandson.isRed;
+
+			if (isLeft) {
+				this.rorSmall(currentNode, children, grandson);
+
+				this.rol(currentNode, grandson);
 
 			} else {
-				newNode.isRed = !newNode.isRed;
+				this.rolSmall(currentNode, children, grandson);
 
-				if (isLeft) {
-					this.rorSmall(grandfather, parent, newNode);
-
-					this.rol(grandfather, newNode, nodes);
-
-				} else {
-					this.rolSmall(grandfather, parent, newNode);
-
-					this.ror(grandfather, newNode, nodes);
-				}
+				this.ror(currentNode, grandson);
 			}
+
+			return { children: grandson, brokeRuleStatus: null, grandson: null };
 		}
+
+		this.root = recLookPlaceAndInsert(this.root).children;
 
 		this.length++;
 
@@ -164,40 +138,16 @@ class RedBlackTree {
 		grandson.left = parent;
 	}
 
-	ror(grandfather, parent, nodes) {
-		if (nodes.length !== 0) {
-			const saveNode = nodes.pop();
+	ror(grandfather, parent) {
+		grandfather.left = parent.right;
 
-			saveNode.left = parent;
-
-			grandfather.left = parent.right;
-
-			parent.right = grandfather;
-		} else {
-			grandfather.left = parent.right;
-
-			parent.right = grandfather;
-
-			this.root = parent;
-		}
+		parent.right = grandfather;
 	}
 
-	rol(grandfather, parent, nodes) {
-		if (nodes.length !== 0) {
-			const saveNode = nodes.pop();
+	rol(grandfather, parent) {
+		grandfather.right = parent.left;
 
-			saveNode.left = parent;
-
-			grandfather.right = parent.left;
-
-			parent.left = grandfather;
-		} else {
-			grandfather.right = parent.left;
-
-			parent.left = grandfather;
-
-			this.root = parent;
-		}
+		parent.left = grandfather;
 	}
 
 	find() {
